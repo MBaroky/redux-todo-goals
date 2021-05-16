@@ -34,7 +34,7 @@
             const input = document.getElementById('todo');
             const title = input.value;
             input.value = '';
-            checkAndDispatch(store, addTodoAction({
+            store.dispatch( addTodoAction({
                 title,
                 complete:false,
                 id:generateId()
@@ -45,7 +45,7 @@
             const input = document.getElementById('goal')
             const title = input.value;
             input.value = ''
-            checkAndDispatch(store, addGoalAction({
+            store.dispatch( addGoalAction({
                 title,
                 id:generateId()
             }))
@@ -66,7 +66,7 @@
             const node = document.createElement('li');
             const text = document.createTextNode(todo.title);
             const removeBtn = createRemoveBtn(()=>{
-                checkAndDispatch(store, removeTodoAction(todo.id))
+                store.dispatch( removeTodoAction(todo.id))
             })
 
             node.appendChild(text);
@@ -75,7 +75,7 @@
 
             node.style.textDecoration = todo.complete ? 'line-through' : ''
             node.addEventListener('click', (e=>{
-                    checkAndDispatch(store, toggleTodoAction(e.target.id))
+                    store.dispatch( toggleTodoAction(e.target.id))
                     // e.target.style.textDecoration = todo.completed ? 'strike-through' : ''
                 }))
 
@@ -88,7 +88,7 @@
             const node = document.createElement('li');
             const text = document.createTextNode(goal.title);
             const removeBtn = createRemoveBtn(()=>{
-                checkAndDispatch(store, removeGoalAction(goal.id))
+                store.dispatch( removeGoalAction(goal.id))
             })
 
             node.appendChild(text);
