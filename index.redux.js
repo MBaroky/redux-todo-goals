@@ -67,22 +67,6 @@ function goals (state = [], action) {
 }
 
 // Middleware example
-// const checkAndDispatch = (store, action) => {
-//     if(
-//         action.type === ADD_TODO
-//         && action.todo.title.toLowerCase().includes('bitcoin')
-//     ) {
-//         return alert("Nope this is a bad idea")
-//     }
-//     if(
-//         action.type === ADD_GOAL
-//         && action.goal.title.toLowerCase().includes('bitcoin')
-//     ) {
-//         return alert("Nope this is a bad idea")
-//     }
-
-//     return store.dispatch(action);
-// }
 
 const checker = (store) => (next) => (action) => {
     if(
@@ -101,12 +85,22 @@ const checker = (store) => (next) => (action) => {
     return next(action);
 }
 
+const logger = (store) => (next) => (action) => {
+    console.group(action.type)
+        console.log('The action is: ',action)
+        const result = next(action);
+        console.log('The new state is: ', store.getState())
+    console.groupEnd()
+
+    return result
+}
+
 // Create store using Redux and compined reducers
 
 const store = Redux.createStore(Redux.combineReducers({
     todos,
     goals
-}), Redux.applyMiddleware(checker))
+}), Redux.applyMiddleware(checker, logger))
 
 
 
