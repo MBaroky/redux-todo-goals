@@ -112,32 +112,5 @@ function app(state = {}, action){
 
 const store = createStore(app);
 
-store.subscribe(()=>{
-    console.log('the state is now: ', store.getState())
-})
-
-
-store.dispatch(addTodoAction({
-    id:0,
-    title:"learn redux",
-    complete:false
-}))
-store.dispatch(addTodoAction({
-    id:1,
-    title:"learn redux1",
-    complete:false
-}))
-store.dispatch(removeTodoAction(0))
-store.dispatch(toggleTodoAction(1))
-
-store.dispatch(addGoalAction({
-    id:0,
-    title:"be a great developer"
-}))
-store.dispatch(addGoalAction({
-    id:1,
-    title:"do your best"
-}))
-store.dispatch(removeGoalAction(0))
 
 
