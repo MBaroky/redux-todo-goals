@@ -9,6 +9,7 @@
     <script src="https://unpkg.com/react@16.3.0-alpha.1/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@16.3.0-alpha.1/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/babel-standalone@6.15.0/babel.min.js"></script>
+    <script src="https://tylermcginnis.com/goals-todos-api/index.js"></script>
 
 
 </head>
@@ -26,7 +27,8 @@
         REMOVE_GOAL = 'REMOVE_GOAL',
         ADD_TODO = 'ADD_TODO',
         REMOVE_TODO = 'REMOVE_TODO',
-        TOGGLE_TODO = 'TOGGLE_TODO';
+        TOGGLE_TODO = 'TOGGLE_TODO',
+        RECEIVE_DATA = 'RECEIVE_DATA'
 
         function addTodoAction (todo) {
             return {
@@ -60,6 +62,14 @@
             }
         }
 
+        function receiveDataAction (todos, goals) {
+            return{
+                type: RECEIVE_DATA,
+                todos,
+                goals
+            }
+        }
+
 
         function todos (state = [], action) {
             switch (action.type) {
@@ -70,6 +80,8 @@
                 case TOGGLE_TODO:
                     return state.map(todo => todo.id !== action.id? todo
                         :{...todo, complete : !todo.complete})
+                case RECEIVE_DATA:
+                    return action.todos
                 default:
                     return state
 
@@ -82,6 +94,17 @@
                     return [...state, action.goal]
                 case REMOVE_GOAL:
                     return state.filter(goal => goal.id !== action.id)
+                case RECEIVE_DATA:
+                    return action.goals
+                default:
+                    return state
+            }
+        }
+
+        function loading(state=true, action){
+            switch(action.type){
+                case RECEIVE_DATA:
+                    return false
                 default:
                     return state
             }
@@ -92,13 +115,13 @@
         const checker = (store) => (next) => (action) => {
             if(
                 action.type === ADD_TODO
-                && action.todo.title.toLowerCase().includes('bitcoin')
+                && action.todo.name.toLowerCase().includes('bitcoin')
             ) {
                 return alert("Nope this is a bad idea")
             }
             if(
                 action.type === ADD_GOAL
-                && action.goal.title.toLowerCase().includes('bitcoin')
+                && action.goal.name.toLowerCase().includes('bitcoin')
             ) {
                 return alert("Nope this is a bad idea")
             }
@@ -120,7 +143,8 @@
 
         const store = Redux.createStore(Redux.combineReducers({
             todos,
-            goals
+            goals,
+            loading
         }), Redux.applyMiddleware(checker, logger))
 
     </script>
@@ -135,7 +159,7 @@
                        style={{
                            textDecoration : item.complete? 'line-through' : 'none'
                        }}
-                       onClick={()=>props.toggle && props.toggle(item.id)}>{item.title}</span>
+                       onClick={()=>props.toggle && props.toggle(item.id)}>{item.name}</span>
                        <button
                        onClick={()=>props.remove(item)}>
                         X
@@ -148,10 +172,10 @@
         class Todos extends React.Component{
             addTodo = (e) => {
                 e.preventDefault()
-                const title = this.input.value;
+                const name = this.input.value;
                 this.input.value = ''
                 this.props.store.dispatch( addTodoAction({
-                    title,
+                    name,
                     complete:false,
                     id:generateId()
                 }))
@@ -169,7 +193,7 @@
                         </h2>
                         <input
                         type="text"
-                        name="title"
+                        name="name"
                         placeholder="type todo"
                         ref={input => this.input = input}
                         id="" />
@@ -183,16 +207,16 @@
         class Goals extends React.Component{
             addGoal = (e) =>{
                 e.preventDefault()
-                const title = this.input.value
+                const name = this.input.value
                 this.input.value = ''
 
                 this.props.store.dispatch(addGoalAction({
-                    title,
+                    name,
                     id: generateId()
                 }))
             }
             removeItem = (goal) =>{
-                this.props.store.dispatch(removeGoalAction(goal))
+                this.props.store.dispatch(removeGoalAction(goal.id))
             }
             render(){
                 return (
@@ -214,9 +238,20 @@
             componentDidMount(){
                 const {store} = this.props;
                 store.subscribe(()=> this.forceUpdate())
+
+                Promise.all([
+                    API.fetchGoals(),
+                    API.fetchTodos()
+                ]).then(([goals, todos]) => {
+                    store.dispatch(receiveDataAction(todos,goals))
+                })
             }
             render (){
-                const {todos , goals } = this.props.store.getState();
+                const {todos , goals, loading } = this.props.store.getState();
+
+                if(loading === true){
+                    return (<h3>Loading</h3>  )
+                }
                 return (
                     <div>
                         <Todos todos={todos} store={this.props.store}/>
