@@ -10,7 +10,7 @@
     <script src="https://unpkg.com/react-dom@16.3.0-alpha.1/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/babel-standalone@6.15.0/babel.min.js"></script>
     <script src="https://tylermcginnis.com/goals-todos-api/index.js"></script>
-
+    <script src="https://unpkg.com/redux-thunk@2.2.0/dist/redux-thunk.min.js"></script>
 
 </head>
 <body>
@@ -28,8 +28,10 @@
         ADD_TODO = 'ADD_TODO',
         REMOVE_TODO = 'REMOVE_TODO',
         TOGGLE_TODO = 'TOGGLE_TODO',
-        RECEIVE_DATA = 'RECEIVE_DATA'
+        RECEIVE_DATA = 'RECEIVE_DATA';
 
+
+        // ACTION CREATORS
         function addTodoAction (todo) {
             return {
                 type:ADD_TODO,
@@ -62,15 +64,27 @@
             }
         }
 
-        function receiveDataAction (todos, goals) {
-            return{
+        function receiveDataAction (todos, goals){
+            return {
                 type: RECEIVE_DATA,
                 todos,
                 goals
             }
         }
 
+        function handleRemoveTodo(todo) {
+            return (dispatch) => {
+                dispatch(removeTodoAction(todo.id))
+                return API.deleteTodo(todo.id)
+                    .catch(() => {
+                        dispatch(addTodoAction(todo));
+                        alert('something went wrong, please try again')
+                    })
+            }
+        }
 
+
+        // REDUCERS
         function todos (state = [], action) {
             switch (action.type) {
                 case ADD_TODO:
@@ -101,8 +115,8 @@
             }
         }
 
-        function loading(state=true, action){
-            switch(action.type){
+        function loading (state =true, action){
+            switch (action.type) {
                 case RECEIVE_DATA:
                     return false
                 default:
@@ -110,7 +124,8 @@
             }
         }
 
-        // Middleware example
+
+        // Middleware
 
         const checker = (store) => (next) => (action) => {
             if(
@@ -139,13 +154,14 @@
             return result
         }
 
+
         // Create store using Redux and compined reducers
 
         const store = Redux.createStore(Redux.combineReducers({
             todos,
             goals,
             loading
-        }), Redux.applyMiddleware(checker, logger))
+        }), Redux.applyMiddleware(ReduxThunk.default, checker, logger))
 
     </script>
     <script type="text/babel">
@@ -172,19 +188,28 @@
         class Todos extends React.Component{
             addTodo = (e) => {
                 e.preventDefault()
-                const name = this.input.value;
-                this.input.value = ''
-                this.props.store.dispatch( addTodoAction({
-                    name,
-                    complete:false,
-                    id:generateId()
-                }))
+
+                return API.saveTodo(this.input.value)
+                .then((todo) => {
+                    this.props.store.dispatch(addTodoAction(todo));
+                    this.input.value = ''
+                })
+                .catch(()=>{
+                    alert("didn't work, retry")
+                })
+
             }
             removeItem = (todo) =>{
-                this.props.store.dispatch(removeTodoAction(todo.id))
+                this.props.store.dispatch(handleRemoveTodo(todo))
+
             }
             toggleItem = (id) => {
                 this.props.store.dispatch(toggleTodoAction(id))
+                return API.saveTodoToggle(id)
+                .catch(()=>{
+                    this.props.store.dispatch(toggleTodoAction(id))
+                    alert("couldn't toggle, maybe later")
+                })
             }
             render () {
                 return (
@@ -206,17 +231,24 @@
         }
         class Goals extends React.Component{
             addGoal = (e) =>{
-                e.preventDefault()
-                const name = this.input.value
-                this.input.value = ''
 
-                this.props.store.dispatch(addGoalAction({
-                    name,
-                    id: generateId()
-                }))
+                return API.saveGoal(this.input.value)
+                .then((goal) => {
+                    this.props.store.dispatch(addGoalAction(goal));
+                    this.input.value =''
+                })
+                .catch(() => {
+                    alert("couldn't save")
+                })
+
             }
             removeItem = (goal) =>{
                 this.props.store.dispatch(removeGoalAction(goal.id))
+                return API.deleteGoal(goal.id)
+                .catch(() =>{
+                    this.props.store.dispatch(addGoalAction(goal))
+                    alert('am error occured please retry')
+                })
             }
             render(){
                 return (
@@ -238,24 +270,24 @@
             componentDidMount(){
                 const {store} = this.props;
                 store.subscribe(()=> this.forceUpdate())
-
-                Promise.all([
-                    API.fetchGoals(),
-                    API.fetchTodos()
-                ]).then(([goals, todos]) => {
-                    store.dispatch(receiveDataAction(todos,goals))
+                Promise.all(
+                    [API.fetchGoals(),
+                    API.fetchTodos()]
+                ).then(([goals,todos]) =>{
+                    store.dispatch(receiveDataAction(todos, goals))
                 })
             }
             render (){
                 const {todos , goals, loading } = this.props.store.getState();
 
-                if(loading === true){
-                    return (<h3>Loading</h3>  )
-                }
                 return (
+
                     <div>
+                        {loading === true? <h2>Loading</h2> :
+                            <React.Fragment>
                         <Todos todos={todos} store={this.props.store}/>
                         <Goals goals={goals} store={this.props.store} />
+                            </React.Fragment>}
                     </div>
                 )
             }
